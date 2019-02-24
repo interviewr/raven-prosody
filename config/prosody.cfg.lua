@@ -27,7 +27,7 @@ default_storage = "internal"
 
 -- storage = { }
 -- sql = ""
-storage = "sql2"
+storage = "sql"
 sql = {driver = "SQLite3", database = "prosody.sqlite"}
 
 archive_expires_after = "1w" -- Remove archived messages after 1 week

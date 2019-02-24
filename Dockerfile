@@ -37,8 +37,7 @@ WORKDIR /usr/src/prosody-$PROSODY_VERSION
 RUN ${PWD}/configure --prefix=/usr --sysconfdir=/etc/prosody --datadir=/var/lib/prosody
 RUN make && make install
 
-RUN hg clone https://hg.prosody.im/prosody-modules/ /opt/prosody-modules-available/ \
-    && mkdir /opt/prosody-modules-enabled
+RUN hg clone https://hg.prosody.im/prosody-modules/ /opt/prosody-modules-available/
 
 ADD config/prosody.cfg.lua /etc/prosody/prosody.cfg.lua
 ADD config/conf.d/ /etc/prosody/conf.d/
@@ -46,8 +45,8 @@ ADD config/vhost.d/ /etc/prosody/vhost.d/
 
 RUN useradd -rs /bin/false prosody \
     && mkdir /var/run/prosody/ \
-    && chown -R prosody:prosody /etc/prosody/ /var/lib/prosody/ /opt/prosody-modules-* \
-    && chmod -R 760 /etc/prosody/ /var/lib/prosody/ /opt/prosody-modules-*
+    && chown -R prosody:prosody /etc/prosody/ /var/lib/prosody/ /var/run/prosody/ /opt/prosody-modules-* \
+    && chmod -R 760 /etc/prosody/ /var/lib/prosody/ /var/run/prosody/ /opt/prosody-modules-*
 
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod 755 /entrypoint.sh

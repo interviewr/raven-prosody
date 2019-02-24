@@ -2,7 +2,7 @@
 -- this option allows you to specify additional locations where Prosody
 -- will look for modules first. For community modules, see https://modules.prosody.im/
 
-plugin_paths = { "/opt/prosody-modules-enabled" }
+plugin_paths = { "/opt/prosody-modules-available" }
 
 modules_enabled = {
   "roster"; -- Allow users to have a roster. Recommended ;)
