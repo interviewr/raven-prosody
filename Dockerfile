@@ -1,94 +1,58 @@
 FROM debian:stretch-slim
 
-ENV DEBIAN_FRONTEND noninteractive
+MAINTAINER Alexey Vakulich <alexey.vakulich@gmail.com>
 
-ARG lua_version=5.2
-ENV LUA_VERSION $lua_version
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        mercurial \
+        adduser \
+        ca-certificates \
+        wget \
+        gnupg \
+        build-essential \
+        lua5.1 \
+        liblua5.1-dev \
+        libidn11-dev \
+        libssl-dev \
+        lua-filesystem \
+        lua-expat \
+        lua-socket \
+        lua-sec \
+        lua-bitop \
+        lua-dbi-sqlite3
 
-RUN set -ex; \
-	\
-	apt-get update -qq; \
-	apt-get install -qq --no-install-suggests --no-install-recommends \
-		ca-certificates \
-		curl \
-		gnupg; \
-	echo deb http://packages.prosody.im/debian stretch main \
-	| tee -a /etc/apt/sources.list; \
-	curl -fsSL https://prosody.im/files/prosody-debian-packages.key \
-	| apt-key add -; \
-	\
-	apt-get update -qq; \
-	apt-get install -qq --no-install-suggests --no-install-recommends \
-		mercurial \
-		lua$LUA_VERSION \
-		liblua$LUA_VERSION \
-		libssl1.0.2 \
-		libidn11 \
-		lua-sec \
-		lua-event \
-		lua-zlib \
-		lua-dbi-postgresql \
-		lua-dbi-mysql \
-		lua-dbi-sqlite3 \
-		lua-bitop \
-		lua-socket \
-		lua-expat \
-		lua-filesystem
+RUN echo deb http://packages.prosody.im/debian stretch main | tee -a /etc/apt/sources.list
+RUN wget --no-check-certificate \ 
+    https://prosody.im/files/prosody-debian-packages.key -O- | apt-key add -
 
 ARG prosody_version=0.11.2
-ARG prosody_sha1=0508cfc1c3c74a7eb8fdac2ed50435e190930f6a
-
 ENV PROSODY_VERSION $prosody_version
-ENV PROSODY_SHA1 $prosody_sha1
 
-RUN set -ex; \
-	if [ "$PROSODY_VERSION" = "trunk" ]; then \
-		hg clone https://hg.prosody.im/trunk/ /usr/src/prosody-$PROSODY_VERSION; \
-	else \
-		curl -o prosody.tar.gz -fSL "https://prosody.im/downloads/source/prosody-${PROSODY_VERSION}.tar.gz"; \
-		echo "$PROSODY_SHA1 *prosody.tar.gz" | sha1sum -c -; \
-		tar -xzf prosody.tar.gz -C /usr/src/; \
-		rm prosody.tar.gz; \
-	fi
+RUN wget https://prosody.im/downloads/source/prosody-${PROSODY_VERSION}.tar.gz
+RUN tar -xzf prosody-${PROSODY_VERSION}.tar.gz -C /usr/src/
+RUN rm prosody-${PROSODY_VERSION}.tar.gz
 
 WORKDIR /usr/src/prosody-$PROSODY_VERSION
 
-RUN set -ex; \
-	\
-	savedAptMark="$(apt-mark showmanual)"; \
-	\
-	apt-get install -qq --no-install-suggests --no-install-recommends \
-		build-essential \
-		bsdmainutils \
-		liblua5.1-dev \
-		libidn11-dev \
-		libssl-dev \
-	; \
-	\
-	${PWD}/configure --lua-version=$LUA_VERSION --prefix=/usr --sysconfdir=/etc/prosody --datadir=/var/lib/prosody; \
-	make && make install; \
-	\
-	hg clone https://hg.prosody.im/prosody-modules/ /opt/prosody-modules-available/ \
-	&& mkdir /opt/prosody-modules-enabled; \
-	\
-	apt-mark auto '.*' > /dev/null; \
-	apt-mark manual $savedAptMark; \
-	apt-get purge -qq --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-	rm -rf /var/lib/apt/lists/*
+RUN ${PWD}/configure --prefix=/usr --sysconfdir=/etc/prosody --datadir=/var/lib/prosody
+RUN make && make install
+
+RUN hg clone https://hg.prosody.im/prosody-modules/ /opt/prosody-modules-available/ \
+    && mkdir /opt/prosody-modules-enabled
 
 ADD config/prosody.cfg.lua /etc/prosody/prosody.cfg.lua
 ADD config/conf.d/ /etc/prosody/conf.d/
+ADD config/vhost.d/ /etc/prosody/vhost.d/
 
-RUN set -ex; \
-	\
-	useradd -rs /bin/false prosody \
-		&& mkdir /etc/prosody/cmpt.d/ /etc/prosody/vhost.d/ \
-		&& chown -R prosody:prosody /etc/prosody/ /var/lib/prosody/ /opt/prosody-modules-* \
-		&& chmod -R 760 /etc/prosody/ /var/lib/prosody/ /opt/prosody-modules-*
+RUN useradd -rs /bin/false prosody \
+    && mkdir /var/run/prosody/ \
+    && chown -R prosody:prosody /etc/prosody/ /var/lib/prosody/ /opt/prosody-modules-* \
+    && chmod -R 760 /etc/prosody/ /var/lib/prosody/ /opt/prosody-modules-*
 
-COPY ./entrypoint.pl /usr/local/bin/
-RUN chmod 755 /usr/local/bin/entrypoint.pl
-ENTRYPOINT ["/usr/local/bin/entrypoint.pl"]
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod 755 /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 
+EXPOSE 80 443 5222 5269 5347 5280 5281
 USER prosody:prosody
-CMD ["/usr/bin/prosody"]
+CMD ["prosody"]
