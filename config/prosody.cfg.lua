@@ -14,7 +14,7 @@ ssl = {
 }
 
 allow_registration = false
-c2s_require_encryption = true
+c2s_require_encryption = false
 s2s_require_encryption = true
 s2s_secure_auth = true
 s2s_insecure_domains = { }
